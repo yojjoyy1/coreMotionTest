@@ -8,9 +8,9 @@ target 'CoreMotionTest' do
   # Pods for CoreMotionTest
 
 inhibit_all_warnings!
-pod 'QVEditorKit'
-pod 'SSZipArchive'
-pod 'YYImage/WebP'
-pod 'PromisesObjC'
+#pod 'QVEditorKit'
+#pod 'SSZipArchive'
+#pod 'YYImage/WebP'
+#pod 'PromisesObjC'
 
 end

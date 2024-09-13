@@ -7,9 +7,10 @@
 
 import UIKit
 import CoreMotion
-import QVEditor
+import CoreLocation
+//import QVEditor
 
-class ViewController: UIViewController,QVEngineDataSourceProtocol {
+class ViewController: UIViewController,CLLocationManagerDelegate {
 
     var cl:CLLocationManager!
     var cm:CMMotionManager!
@@ -18,7 +19,11 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
     var accelerationBtn:UIButton!
     var textView:UITextView!
     var textView2:UITextView!
-    var editorConfig:QVEditorConfiguration!
+    var baseMagneticField: Double = 0.0
+    var imageV:UIImageView!
+    //原始角度
+    var rotationAngle = 0.0
+//    var editorConfig:QVEditorConfiguration!
     //MARK: 生命週期
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,11 +33,11 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         cl.startUpdatingHeading()
-        editorConfig = QVEditorConfiguration()
-        editorConfig.licensePath = Bundle.main.path(forResource: "LICENSE", ofType: "txt")!
-        editorConfig.defaultTemplateVersion = 1
-        editorConfig.corruptImgPath = Bundle.main.path(forResource: "error", ofType: "jpeg")!
-        QVEditor.initialize(withConfig: editorConfig, delegate: self)
+//        editorConfig = QVEditorConfiguration()
+//        editorConfig.licensePath = Bundle.main.path(forResource: "LICENSE", ofType: "txt")!
+//        editorConfig.defaultTemplateVersion = 1
+//        editorConfig.corruptImgPath = Bundle.main.path(forResource: "error", ofType: "jpeg")!
+//        QVEditor.initialize(withConfig: editorConfig, delegate: self)
     }
 
     //MARK: 自訂方法
@@ -40,6 +45,10 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
         view.backgroundColor = .white
         cm = CMMotionManager()
         cl = CLLocationManager()
+        // 設置位置管理器
+        cl.delegate = self
+        cl.startUpdatingHeading()
+        cl.requestWhenInUseAuthorization()
         
     }
     func createView(){
@@ -83,6 +92,13 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
         textView2.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(textView2)
         textView2LayoutCons()
+        imageV = UIImageView(frame: .zero)
+        imageV.contentMode = .scaleAspectFit
+        imageV.image = UIImage(named: "compass")?.withRenderingMode(.alwaysTemplate)
+        imageV.tintColor = .red
+        imageV.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(imageV)
+        imageVLayoutCons()
     }
     
     func btnLayoutCons(){
@@ -120,6 +136,14 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
         let height = NSLayoutConstraint(item: self.textView2, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .height, multiplier: 1.0, constant: 50)
         NSLayoutConstraint.activate([leading,bottom,trailing,height])
     }
+    func imageVLayoutCons(){
+        let lead = NSLayoutConstraint(item: self.imageV, attribute: .leading, relatedBy: .equal, toItem: self.view, attribute: .leading, multiplier: 1.0, constant: 10)
+        let trailing = NSLayoutConstraint(item: self.imageV, attribute: .trailing, relatedBy: .equal, toItem: self.view, attribute: .trailing, multiplier: 1.0, constant: -10)
+        let top = NSLayoutConstraint(item: self.imageV, attribute: .top, relatedBy: .equal, toItem: self.view, attribute: .top, multiplier: 1.0, constant: self.view.safeAreaLayoutGuide.layoutFrame.origin.y + 40)
+        let height = NSLayoutConstraint(item: self.imageV, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 100)
+        NSLayoutConstraint.activate([lead,trailing,top,height])
+//        self.imageV.transform = CGAffineTransform(rotationAngle: 180)
+    }
     //MARK: 按鈕方法
     @objc func btnAction(){
         self.cm.startMagnetometerUpdates()
@@ -128,27 +152,41 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
             if !self.textView.text.isEmpty{
                 self.textView.text = ""
             }
-            self.textView.text = "x:\(field.x),y:\(field.y),z:\(field.z)"
-            print("x位置:\(field.x),y位置:\(field.y),x位置:\(field.z)")
+//            print("x位置:\(field.x),y位置:\(field.y),x位置:\(field.z)")
+            let heading = self.calculateHeading(x: field.x, y: field.y)
+//            print("Heading: \(heading) degrees")
+            self.textView.text = "Heading: \(heading) degrees"
+//            self.imageV.transform = CGAffineTransform(rotationAngle: heading)
         }
     }
     
     @objc func autoMotion(){
-        self.cm.magnetometerUpdateInterval = 1.0
+        self.cm.magnetometerUpdateInterval = 0.1
         let queue = OperationQueue.current
-        self.cm.startMagnetometerUpdates(to: queue!) {
+        self.cm.startMagnetometerUpdates(to: OperationQueue.main) {
             cmData, error in
             if error != nil{
                 print("autoMotion error:\(error?.localizedDescription)")
             }else{
-                if let cmData = self.cm.magnetometerData{
-                    let field = cmData.magneticField
-                    if !self.textView.text.isEmpty{
-                        self.textView.text = ""
-                    }
-                    self.textView.text = "x:\(field.x),y:\(field.y),z:\(field.z)"
-                    print("x位置:\(field.x),y位置:\(field.y),x位置:\(field.z)")
+                let field = cmData!.magneticField
+                if !self.textView.text.isEmpty{
+                    self.textView.text = ""
                 }
+//                print("x位置:\(field.x),y位置:\(field.y),x位置:\(field.z)")
+                let heading = self.calculateHeading(x: field.x, y: field.y)
+                self.updateCompass(heading: heading)
+                //計算磁場強度
+                let totalFieldStrength = self.calculateFieldStrength(x: field.x, y: field.y, z: field.z)
+                print("磁場強度: \(totalFieldStrength) µT")
+                self.textView.text = "磁場強度: \(totalFieldStrength) µT"
+//                    if abs(totalFieldStrength - self.baseMagneticField) > 20 { // Detecting change
+//                        print("Metal detected! Field strength: \(totalFieldStrength)")
+//                        self.textView.text = "Metal detected! Field strength: \(totalFieldStrength)"
+//                        // Trigger an action, like sound or UI change.
+//                    } else {
+//                        print("No metal nearby")
+//                        self.textView.text = "Metal detected! totalFieldStrength: \(totalFieldStrength)"
+//                    }
             }
         }
     }
@@ -166,15 +204,40 @@ class ViewController: UIViewController,QVEngineDataSourceProtocol {
     }
 
     //MARK: QVEngineDataSourceProtocol
-    func languageCode() -> String {
-        return "zh-Tw"
+//    func languageCode() -> String {
+//        return "zh-Tw"
+//    }
+//    func textPrepare(_ textPrepareMode: QVTextPrepareMode) -> QVTextPrepareModel {
+//        var textModel = QVTextPrepareModel()
+//        if QVTextPrepareMode.location == textPrepareMode{
+//            textModel.location = languageCode()
+//        }
+//        return textModel
+//    }
+    //MARK: CLLocationManagerDelegate
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+//        if newHeading.headingAccuracy > 0 {
+//            // 方向數據
+//            let magneticHeading = newHeading.magneticHeading
+//            updateCompass(heading: magneticHeading)
+//        }
     }
-    func textPrepare(_ textPrepareMode: QVTextPrepareMode) -> QVTextPrepareModel {
-        var textModel = QVTextPrepareModel()
-        if QVTextPrepareMode.location == textPrepareMode{
-            textModel.location = languageCode()
-        }
-        return textModel
+    func calculateHeading(x: Double, y: Double) -> Double {
+        // Using only x and y for a 2D compass-like behavior
+        let heading = atan2(y, x) * 180 / .pi
+        let resultHeading = heading >= 0 ? heading : heading + 360
+        print("calculateHeading resultHeading:\(resultHeading)")
+        return resultHeading
+    }
+    func calculateFieldStrength(x: Double, y: Double, z: Double) -> Double {
+        // Calculate total magnetic field strength
+        return sqrt(x * x + y * y + z * z)
+    }
+    func updateCompass(heading: CLLocationDirection){
+        // 這裡可以將指南針的UI旋轉到對應角度
+        let updateRotationAngle = CGFloat(heading / 180.0 * .pi)
+        self.rotationAngle = updateRotationAngle
+        self.imageV.transform = CGAffineTransform(rotationAngle: self.rotationAngle)
     }
 }
 

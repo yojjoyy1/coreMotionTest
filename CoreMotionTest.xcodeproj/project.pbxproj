@@ -31,6 +31,7 @@
 		170D51762C69A96E00044598 /* 桃源相簿權限.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "桃源相簿權限.jpg"; sourceTree = "<group>"; };
 		170D51782C69A9E500044598 /* error.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = error.jpeg; sourceTree = "<group>"; };
 		170D517A2C69AAF000044598 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		17FDCEFA2C9433EA00F2C720 /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
 		2FCFDE06ED48D9A3398A75D1 /* Pods-CoreMotionTest.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoreMotionTest.debug.xcconfig"; path = "Target Support Files/Pods-CoreMotionTest/Pods-CoreMotionTest.debug.xcconfig"; sourceTree = "<group>"; };
 		C3015594CCE906CD6741D5F8 /* Pods-CoreMotionTest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoreMotionTest.release.xcconfig"; path = "Target Support Files/Pods-CoreMotionTest/Pods-CoreMotionTest.release.xcconfig"; sourceTree = "<group>"; };
 		F1DEE60E3370EDF77F5D40B1 /* Pods_CoreMotionTest.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CoreMotionTest.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -95,6 +96,7 @@
 		F28436D8607EEE4DAE8E8B6C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				17FDCEFA2C9433EA00F2C720 /* ARKit.framework */,
 				F1DEE60E3370EDF77F5D40B1 /* Pods_CoreMotionTest.framework */,
 			);
 			name = Frameworks;
@@ -111,7 +113,6 @@
 				170D515B2C66151800044598 /* Sources */,
 				170D515C2C66151800044598 /* Frameworks */,
 				170D515D2C66151800044598 /* Resources */,
-				F91FB3A141144D0644E5C751 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -192,23 +193,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		F91FB3A141144D0644E5C751 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CoreMotionTest/Pods-CoreMotionTest-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CoreMotionTest/Pods-CoreMotionTest-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CoreMotionTest/Pods-CoreMotionTest-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
