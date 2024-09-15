@@ -21,8 +21,17 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
     var textView2:UITextView!
     var baseMagneticField: Double = 0.0
     var imageV:UIImageView!
+    var hitImgV:UIImageView!
+    var maximumAcceleration = 0.0
     //原始角度
     var rotationAngle = 0.0
+    var startMagnetometerBool = false
+    var startAccelerometerBool = false
+    var startCompassBool = false
+    var bossImgV:UIImageView!
+    var gameStatusLabel:UILabel!
+    var blood = 10
+    var isHit = false
 //    var editorConfig:QVEditorConfiguration!
     //MARK: 生命週期
     override func viewDidLoad() {
@@ -54,7 +63,7 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
     func createView(){
         motionBtn = UIButton(frame: .zero)
         motionBtn.translatesAutoresizingMaskIntoConstraints = false
-        motionBtn.setTitle("手動偵測磁場狀態", for: .normal)
+        motionBtn.setTitle("啟動指北針狀態", for: .normal)
         motionBtn.setTitleColor(.white, for: .normal)
         motionBtn.backgroundColor = .darkGray
         motionBtn.addTarget(self, action: #selector(self.btnAction), for: .touchUpInside)
@@ -99,6 +108,29 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         imageV.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(imageV)
         imageVLayoutCons()
+        hitImgV = UIImageView(frame: .zero)
+//        hitImgV.contentMode = .scaleAspectFill
+        hitImgV.image = UIImage(named: "hit")
+        hitImgV.alpha = 0
+        hitImgV.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(hitImgV)
+        self.view.bringSubviewToFront(hitImgV)
+        self.hitImgVLayoutCons()
+        bossImgV = UIImageView(frame: .zero)
+        bossImgV.image = UIImage(named: "boss")
+        bossImgV.alpha = 1
+        bossImgV.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(bossImgV)
+        self.bossImgVLayoutCons()
+        gameStatusLabel = UILabel(frame: .zero)
+        gameStatusLabel.alpha = 0
+        gameStatusLabel.textColor = .red
+        gameStatusLabel.font = UIFont.boldSystemFont(ofSize: 60)
+        gameStatusLabel.text = "你贏了!!"
+        gameStatusLabel.textAlignment = .center
+        gameStatusLabel.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(gameStatusLabel)
+        self.gameStatusLayoutCons()
     }
     
     func btnLayoutCons(){
@@ -144,62 +176,117 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         NSLayoutConstraint.activate([lead,trailing,top,height])
 //        self.imageV.transform = CGAffineTransform(rotationAngle: 180)
     }
+    func hitImgVLayoutCons(){
+        let leading = NSLayoutConstraint(item: self.hitImgV, attribute: .leading, relatedBy: .equal, toItem: self.view, attribute: .leading, multiplier: 1.0, constant: 5)
+        let trailing = NSLayoutConstraint(item: self.hitImgV, attribute: .trailing, relatedBy: .equal, toItem: self.view, attribute: .trailing, multiplier: 1.0, constant: -5)
+        let top = NSLayoutConstraint(item: self.hitImgV, attribute: .top, relatedBy: .equal, toItem: self.view, attribute: .top, multiplier: 1.0, constant: 10)
+        let bottom = NSLayoutConstraint(item: self.hitImgV, attribute: .bottom, relatedBy: .equal, toItem: self.view, attribute: .bottom, multiplier: 1.0, constant: -5)
+        NSLayoutConstraint.activate([leading,trailing,top,bottom])
+    }
+    func bossImgVLayoutCons(){
+        let top = NSLayoutConstraint(item: self.bossImgV, attribute: .top, relatedBy: .equal, toItem: self.hitImgV, attribute: .top, multiplier: 1.0, constant: 40)
+        let centerx = NSLayoutConstraint(item: self.bossImgV, attribute: .centerX, relatedBy: .equal, toItem: self.view, attribute: .centerX, multiplier: 1.0, constant: 0)
+        let width = NSLayoutConstraint(item: self.bossImgV, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 300)
+        let height = NSLayoutConstraint(item: self.bossImgV, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 300)
+        NSLayoutConstraint.activate([top,centerx,width,height])
+    }
+    func gameStatusLayoutCons(){
+        let top = NSLayoutConstraint(item: self.gameStatusLabel, attribute: .top, relatedBy: .equal, toItem: self.hitImgV, attribute: .top, multiplier: 1.0, constant: 10)
+        let centerx = NSLayoutConstraint(item: self.gameStatusLabel, attribute: .centerX, relatedBy: .equal, toItem: self.view, attribute: .centerX, multiplier: 1.0, constant: 0)
+        let width = NSLayoutConstraint(item: self.gameStatusLabel, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: self.view.frame.size.width)
+        let height = NSLayoutConstraint(item: self.gameStatusLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 300)
+        NSLayoutConstraint.activate([top,centerx,width,height])
+    }
     //MARK: 按鈕方法
     @objc func btnAction(){
-        self.cm.startMagnetometerUpdates()
-        if let cmData = self.cm.magnetometerData{
-            let field = cmData.magneticField
-            if !self.textView.text.isEmpty{
-                self.textView.text = ""
+        if !startCompassBool{
+            startCompassBool = true
+            self.cm.deviceMotionUpdateInterval = 0.1
+            self.cm.startDeviceMotionUpdates(to: OperationQueue.main) {
+                (data, error) in
+                if let validData = data {
+                    let attitude = validData.attitude
+                    let heading = self.calculateHeading(attitude: attitude)
+                    print("Heading: \(heading) degrees")
+                    self.imageV.transform = CGAffineTransform(rotationAngle: CGFloat(heading * .pi / 180))
+                }
             }
-//            print("x位置:\(field.x),y位置:\(field.y),x位置:\(field.z)")
-            let heading = self.calculateHeading(x: field.x, y: field.y)
-//            print("Heading: \(heading) degrees")
-            self.textView.text = "Heading: \(heading) degrees"
-//            self.imageV.transform = CGAffineTransform(rotationAngle: heading)
+        }else{
+            self.cm.stopDeviceMotionUpdates()
+            startCompassBool = false
         }
     }
     
     @objc func autoMotion(){
-        self.cm.magnetometerUpdateInterval = 0.1
-        let queue = OperationQueue.current
-        self.cm.startMagnetometerUpdates(to: OperationQueue.main) {
-            cmData, error in
-            if error != nil{
-                print("autoMotion error:\(error?.localizedDescription)")
-            }else{
-                let field = cmData!.magneticField
-                if !self.textView.text.isEmpty{
-                    self.textView.text = ""
+        if !startMagnetometerBool{
+            startMagnetometerBool = true
+            self.cm.magnetometerUpdateInterval = 0.1
+            self.cm.startMagnetometerUpdates(to: OperationQueue.main, withHandler: { tometerData, error in
+                if error != nil{
+                    print("autoMotion error:\(error?.localizedDescription)")
+                }else{
+                    let field = tometerData!.magneticField
+                    if !self.textView.text.isEmpty{
+                        self.textView.text = ""
+                    }
+                    let x = field.x
+                    let y = field.y
+                    let z = field.z
+                    print("x強度:\(x),y強度:\(y),z強度:\(z)")
+                    //計算磁場強度
+                    let totalFieldStrength = self.calculateFieldStrength(x: x , y: y, z: z)
+                    print("磁場強度: \(totalFieldStrength) µT")
+                    self.textView.text = "磁場強度: \(totalFieldStrength) µT"
                 }
-//                print("x位置:\(field.x),y位置:\(field.y),x位置:\(field.z)")
-                let heading = self.calculateHeading(x: field.x, y: field.y)
-                self.updateCompass(heading: heading)
-                //計算磁場強度
-                let totalFieldStrength = self.calculateFieldStrength(x: field.x, y: field.y, z: field.z)
-                print("磁場強度: \(totalFieldStrength) µT")
-                self.textView.text = "磁場強度: \(totalFieldStrength) µT"
-//                    if abs(totalFieldStrength - self.baseMagneticField) > 20 { // Detecting change
-//                        print("Metal detected! Field strength: \(totalFieldStrength)")
-//                        self.textView.text = "Metal detected! Field strength: \(totalFieldStrength)"
-//                        // Trigger an action, like sound or UI change.
-//                    } else {
-//                        print("No metal nearby")
-//                        self.textView.text = "Metal detected! totalFieldStrength: \(totalFieldStrength)"
-//                    }
-            }
+            })
+        }else{
+            self.cm.stopMagnetometerUpdates()
+            startMagnetometerBool = false
         }
     }
     @objc func accelerationMotion(){
-        self.cm.startAccelerometerUpdates()
-        self.cm.accelerometerUpdateInterval = 1.0
-        let queue = OperationQueue.main
-        self.cm.startAccelerometerUpdates(to: queue) {
-            cmData, err in
-            if !self.textView2.text.isEmpty{
-                self.textView2.text = ""
+        if !startAccelerometerBool{
+            startAccelerometerBool = true
+            self.cm.startAccelerometerUpdates()
+            self.cm.accelerometerUpdateInterval = 0.1
+            let queue = OperationQueue.main
+            
+            self.cm.startAccelerometerUpdates(to: queue) {
+                cmData, err in
+                if !self.textView2.text.isEmpty{
+                    self.textView2.text = ""
+                }
+                let acceleration = self.calculateAcceleration(x: cmData!.acceleration.x, y: cmData!.acceleration.y, z: cmData!.acceleration.z)
+                print("加速度: \(acceleration) m/s²")
+                self.textView2.text = "加速度: \(acceleration) m/s² 最高紀錄: \(self.maximumAcceleration) m/s²"
+                if !self.isHit{
+                    if acceleration > 5{
+                        self.blood -= 1
+                        if self.blood > 0{
+                            UIView.animate(withDuration: 1) {
+                                self.isHit = true
+                                self.hitImgV.alpha = 1
+                                self.bossImgV.image = UIImage(named: "bosshit")
+                            } completion: { b in
+                                self.isHit = false
+                                self.hitImgV.alpha = 0
+                                self.bossImgV.image = UIImage(named: "boss")
+                            }
+
+                        }else{
+                            self.isHit = false
+                            self.hitImgV.alpha = 0
+                            self.bossImgV.alpha = 0
+                            self.gameStatusLabel.alpha = 1
+                            self.cm.stopAccelerometerUpdates()
+                            self.startAccelerometerBool = false
+                        }
+                    }
+                }
             }
-            self.textView2.text = "x:\(cmData!.acceleration.x),y:\(cmData!.acceleration.y),z:\(cmData!.acceleration.z)"
+        }else{
+            self.cm.stopAccelerometerUpdates()
+            startAccelerometerBool = false
         }
     }
 
@@ -222,12 +309,12 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
 //            updateCompass(heading: magneticHeading)
 //        }
     }
-    func calculateHeading(x: Double, y: Double) -> Double {
-        // Using only x and y for a 2D compass-like behavior
-        let heading = atan2(y, x) * 180 / .pi
-        let resultHeading = heading >= 0 ? heading : heading + 360
-        print("calculateHeading resultHeading:\(resultHeading)")
-        return resultHeading
+    func calculateHeading(attitude: CMAttitude) -> Double {
+        // 獲取設備的方向（yaw），並轉換為角度
+        let yaw = attitude.yaw * 180 / .pi
+        // 確保角度在 0 到 360 之間
+        let heading = yaw >= 0 ? yaw : yaw + 360
+        return heading
     }
     func calculateFieldStrength(x: Double, y: Double, z: Double) -> Double {
         // Calculate total magnetic field strength
@@ -238,6 +325,15 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         let updateRotationAngle = CGFloat(heading / 180.0 * .pi)
         self.rotationAngle = updateRotationAngle
         self.imageV.transform = CGAffineTransform(rotationAngle: self.rotationAngle)
+    }
+    //計算加速度
+    func calculateAcceleration(x: Double, y: Double, z: Double) -> Double {
+        let gForce = sqrt(x * x + y * y + z * z)
+        let result = gForce
+        if maximumAcceleration < result{
+            maximumAcceleration = result
+        }
+        return result // 將 g-force 轉換為 m/s²
     }
 }
 
